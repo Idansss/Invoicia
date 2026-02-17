@@ -191,7 +191,7 @@ async function main() {
           {
             productId: products[0].id,
             description: "Consulting (hour)",
-            quantity: new Prisma.Decimal(2),
+            quantity: 2,
             unitPriceCents: products[0].unitPriceCents,
             unit: products[0].unit,
             taxPercent: 7,
@@ -199,7 +199,7 @@ async function main() {
           {
             productId: products[1].id,
             description: "Implementation",
-            quantity: new Prisma.Decimal(1),
+            quantity: 1,
             unitPriceCents: products[1].unitPriceCents,
             unit: products[1].unit,
             taxPercent: 7,
@@ -229,7 +229,7 @@ async function main() {
           {
             productId: products[2].id,
             description: "Support retainer",
-            quantity: new Prisma.Decimal(1),
+            quantity: 1,
             unitPriceCents: products[2].unitPriceCents,
             unit: products[2].unit,
             taxPercent: 7,
@@ -259,7 +259,7 @@ async function main() {
           {
             productId: products[3].id,
             description: "Training session",
-            quantity: new Prisma.Decimal(3),
+            quantity: 3,
             unitPriceCents: products[3].unitPriceCents,
             unit: products[3].unit,
             taxPercent: 7,
