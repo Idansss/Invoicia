@@ -11,6 +11,12 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge"
+import {
+  invoiceBalanceInclude,
+  type InvoiceCreditNote,
+  type InvoicePayment,
+  type InvoiceWithBalance,
+} from "@/types/invoice"
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,21 +29,27 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   const invoices = await prisma.invoice.findMany({
     where: { orgId, customerId: customer.id },
-    include: { lineItems: true, payments: true, creditNotes: true },
+    include: invoiceBalanceInclude,
     orderBy: { createdAt: "desc" },
     take: 10,
   })
+  const typedInvoices: InvoiceWithBalance[] = invoices
 
   const org = await prisma.organization.findUniqueOrThrow({
     where: { id: orgId },
     select: { currency: true, timezone: true },
   })
 
-  const totals = invoices.reduce(
+  const totals = typedInvoices.reduce(
     (acc, inv) => {
       const invoiceTotals = computeInvoiceTotals(inv)
-      const paidCents = inv.payments.filter((p) => p.status === "SUCCEEDED").reduce((s, p) => s + p.amountCents, 0)
-      const creditsCents = inv.creditNotes.reduce((s, c) => s + c.amountCents, 0)
+      const paidCents = inv.payments
+        .filter((p: InvoicePayment) => p.status === "SUCCEEDED")
+        .reduce((s: number, p: InvoicePayment) => s + p.amountCents, 0)
+      const creditsCents = inv.creditNotes.reduce(
+        (s: number, c: InvoiceCreditNote) => s + c.amountCents,
+        0,
+      )
       const dueCents = Math.max(0, invoiceTotals.totalCents - paidCents - creditsCents)
       return {
         totalCents: acc.totalCents + invoiceTotals.totalCents,
@@ -76,7 +88,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         {[
           { label: "Total Invoiced", value: formatMoney(totals.totalCents, org.currency), icon: DollarSign },
           { label: "Outstanding", value: formatMoney(totals.outstandingCents, org.currency), icon: Calendar },
-          { label: "Invoices", value: String(invoices.length), icon: FileText },
+          { label: "Invoices", value: String(typedInvoices.length), icon: FileText },
           { label: "Default Terms", value: `Net ${customer.defaultPaymentTermsDays}`, icon: Building2 },
         ].map((stat) => (
           <Card key={stat.label}>
@@ -110,14 +122,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.length === 0 ? (
+              {typedInvoices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-20 text-center text-sm text-muted-foreground">
                     No invoices yet
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((inv) => {
+                typedInvoices.map((inv) => {
                   const totals = computeInvoiceTotals(inv)
                   return (
                     <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50">

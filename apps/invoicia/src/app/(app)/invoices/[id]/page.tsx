@@ -4,6 +4,7 @@ import { prisma } from "@/server/db"
 import { requireOrgRole } from "@/server/tenant"
 import { computeInvoiceTotals } from "@/domain/invoice-calculations"
 import { InvoiceDetailClient } from "./client"
+import { type InvoiceCreditNote, type InvoicePayment } from "@/types/invoice"
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -29,8 +30,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) return notFound()
 
   const totals = computeInvoiceTotals(invoice)
-  const paidCents = invoice.payments.filter((p) => p.status === "SUCCEEDED").reduce((s, p) => s + p.amountCents, 0)
-  const creditsCents = invoice.creditNotes.reduce((s, c) => s + c.amountCents, 0)
+  const paidCents = invoice.payments
+    .filter((p: InvoicePayment) => p.status === "SUCCEEDED")
+    .reduce((s: number, p: InvoicePayment) => s + p.amountCents, 0)
+  const creditsCents = invoice.creditNotes.reduce(
+    (s: number, c: InvoiceCreditNote) => s + c.amountCents,
+    0,
+  )
   const dueCents = Math.max(0, totals.totalCents - paidCents - creditsCents)
 
   return (

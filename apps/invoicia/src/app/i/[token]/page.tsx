@@ -24,6 +24,7 @@ import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
 import { TrackView } from "./track-view";
 import { isStripeConfigured } from "@/server/payments/stripe";
 import { HostedInvoiceActions } from "./hosted-actions";
+import { type InvoiceCreditNote, type InvoicePayment } from "@/types/invoice";
 
 export default async function HostedInvoicePage({
   params,
@@ -45,8 +46,13 @@ export default async function HostedInvoicePage({
   if (!invoice) return notFound();
 
   const totals = computeInvoiceTotals(invoice);
-  const paidCents = invoice.payments.filter((p) => p.status === "SUCCEEDED").reduce((s, p) => s + p.amountCents, 0);
-  const creditsCents = invoice.creditNotes.reduce((s, c) => s + c.amountCents, 0);
+  const paidCents = invoice.payments
+    .filter((p: InvoicePayment) => p.status === "SUCCEEDED")
+    .reduce((s: number, p: InvoicePayment) => s + p.amountCents, 0);
+  const creditsCents = invoice.creditNotes.reduce(
+    (s: number, c: InvoiceCreditNote) => s + c.amountCents,
+    0,
+  );
   const dueCents = Math.max(0, totals.totalCents - paidCents - creditsCents);
   const stripeEnabled = isStripeConfigured();
   const isPaid = invoice.status === "PAID";

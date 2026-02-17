@@ -21,6 +21,12 @@ import { computeInvoiceTotals } from "@/domain/invoice-calculations"
 import { formatDate, formatMoney } from "@/lib/format"
 import { prisma } from "@/server/db"
 import { requireOrgRole } from "@/server/tenant"
+import {
+  invoiceWithCustomerBalanceInclude,
+  type InvoiceCreditNote,
+  type InvoicePayment,
+  type InvoiceWithCustomerBalance,
+} from "@/types/invoice"
 
 const quickActions = [
   { label: "Create invoice", icon: Plus, href: "/invoices/new" },
@@ -39,16 +45,12 @@ export default async function AppOverviewPage() {
     }),
     prisma.invoice.findMany({
       where: { orgId },
-      include: {
-        customer: true,
-        lineItems: true,
-        payments: true,
-        creditNotes: true,
-      },
+      include: invoiceWithCustomerBalanceInclude,
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
   ])
+  const typedInvoices: InvoiceWithCustomerBalance[] = invoices
 
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -58,12 +60,15 @@ export default async function AppOverviewPage() {
   let overdueCents = 0
   let paidThisMonthCents = 0
 
-  for (const invoice of invoices) {
+  for (const invoice of typedInvoices) {
     const totals = computeInvoiceTotals(invoice)
     const paidCents = invoice.payments
-      .filter((payment) => payment.status === "SUCCEEDED")
-      .reduce((sum, payment) => sum + payment.amountCents, 0)
-    const creditsCents = invoice.creditNotes.reduce((sum, note) => sum + note.amountCents, 0)
+      .filter((payment: InvoicePayment) => payment.status === "SUCCEEDED")
+      .reduce((sum: number, payment: InvoicePayment) => sum + payment.amountCents, 0)
+    const creditsCents = invoice.creditNotes.reduce(
+      (sum: number, note: InvoiceCreditNote) => sum + note.amountCents,
+      0,
+    )
     const dueCents = Math.max(0, totals.totalCents - paidCents - creditsCents)
 
     totalInvoicedCents += totals.totalCents
@@ -81,8 +86,8 @@ export default async function AppOverviewPage() {
     }
   }
 
-  const activeCustomers = new Set(invoices.map((invoice) => invoice.customerId)).size
-  const recentInvoices = invoices.slice(0, 5)
+  const activeCustomers = new Set(typedInvoices.map((invoice) => invoice.customerId)).size
+  const recentInvoices = typedInvoices.slice(0, 5)
 
   return (
     <div className="space-y-6">

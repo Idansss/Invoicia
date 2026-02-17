@@ -3,6 +3,12 @@ import { requireOrgRole } from "@/server/tenant"
 import { computeInvoiceTotals } from "@/domain/invoice-calculations"
 import { formatMoney } from "@/lib/format"
 import { CustomersClient, type CustomerRow } from "./client"
+import {
+  invoiceBalanceInclude,
+  type InvoiceCreditNote,
+  type InvoicePayment,
+  type InvoiceWithBalance,
+} from "@/types/invoice"
 
 export default async function CustomersPage() {
   const { orgId } = await requireOrgRole(["OWNER", "ADMIN", "ACCOUNTANT", "STAFF", "READONLY"])
@@ -15,17 +21,21 @@ export default async function CustomersPage() {
     prisma.customer.findMany({ where: { orgId }, orderBy: { createdAt: "desc" } }),
     prisma.invoice.findMany({
       where: { orgId },
-      include: { lineItems: true, payments: true, creditNotes: true },
+      include: invoiceBalanceInclude,
     }),
   ])
+  const typedInvoices: InvoiceWithBalance[] = invoices
 
   const totalsByCustomer = new Map<string, { totalCents: number; outstandingCents: number }>()
-  invoices.forEach((inv) => {
+  typedInvoices.forEach((inv) => {
     const totals = computeInvoiceTotals(inv)
     const paidCents = inv.payments
-      .filter((p) => p.status === "SUCCEEDED")
-      .reduce((s, p) => s + p.amountCents, 0)
-    const creditsCents = inv.creditNotes.reduce((s, c) => s + c.amountCents, 0)
+      .filter((p: InvoicePayment) => p.status === "SUCCEEDED")
+      .reduce((s: number, p: InvoicePayment) => s + p.amountCents, 0)
+    const creditsCents = inv.creditNotes.reduce(
+      (s: number, c: InvoiceCreditNote) => s + c.amountCents,
+      0,
+    )
     const dueCents = Math.max(0, totals.totalCents - paidCents - creditsCents)
     const existing = totalsByCustomer.get(inv.customerId) || { totalCents: 0, outstandingCents: 0 }
     totalsByCustomer.set(inv.customerId, {
