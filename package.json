@@ -4,6 +4,7 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm dev:ui",
+    "postinstall": "node scripts/prisma-generate.mjs",
     "check:utf8": "node scripts/check-utf8.mjs",
     "dev:backend": "dotenv -e .env -- pnpm --filter invoicia dev",
     "dev:ui": "node scripts/dev-ui.mjs",
