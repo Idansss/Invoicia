@@ -2,7 +2,16 @@ import { prisma } from "@/server/db"
 import { requireOrgRole } from "@/server/tenant"
 import { formatDateTime } from "@/lib/format"
 import { AuditClient, type AuditEventRow } from "./client"
-import type { AuditEvent } from "@prisma/client"
+
+type AuditEvent = {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  createdAt: Date
+  actorUserId?: string | null
+  data?: unknown
+}
 
 function isString(value: string | null | undefined): value is string {
   return Boolean(value)
@@ -10,7 +19,7 @@ function isString(value: string | null | undefined): value is string {
 
 function getEventDataName(data: AuditEvent["data"]) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null
-  const maybeName = data.name
+  const maybeName = (data as Record<string, unknown>).name
   return typeof maybeName === "string" ? maybeName : null
 }
 
@@ -20,13 +29,13 @@ export default async function AuditLogPage() {
     where: { id: orgId },
     select: { timezone: true },
   })
-  const events: AuditEvent[] = await prisma.auditEvent.findMany({
+  const events = await prisma.auditEvent.findMany({
     where: { orgId },
     orderBy: { createdAt: "desc" },
     take: 100,
   })
 
-  const actorIds = Array.from(new Set(events.map((event) => event.actorUserId).filter(isString)))
+  const actorIds = Array.from(new Set((events as AuditEvent[]).map((event) => event.actorUserId).filter(isString)))
   const actors = actorIds.length
     ? await prisma.user.findMany({
         where: { id: { in: actorIds } },
