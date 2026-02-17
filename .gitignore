@@ -23,6 +23,8 @@ apps/**/prisma/dev.db*
 # Local storage artifacts
 storage
 apps/**/storage
+!apps/invoicia/src/server/storage/
+!apps/invoicia/src/server/storage/**
 
 # IDE
 .idea

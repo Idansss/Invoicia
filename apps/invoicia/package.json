@@ -36,6 +36,7 @@
     "@react-email/render": "^1.1.0",
     "@react-pdf/renderer": "^4.3.0",
     "@tanstack/react-table": "^8.21.3",
+    "@vercel/blob": "^2.2.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.57.0",
     "class-variance-authority": "^0.7.1",

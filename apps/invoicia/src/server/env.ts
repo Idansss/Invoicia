@@ -22,7 +22,9 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional().default(""),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
 
+  STORAGE_BACKEND: z.enum(["local", "vercel-blob"]).default("local"),
   STORAGE_DIR: z.string().default("storage"),
+  BLOB_READ_WRITE_TOKEN: z.string().optional().default(""),
   DEFAULT_ORG_TIMEZONE: z.string().default("Africa/Lagos"),
 
   GOOGLE_CLIENT_ID: z.string().optional().default(""),

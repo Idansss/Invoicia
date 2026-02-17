@@ -1,14 +1,13 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import { prisma } from "@/server/db";
-import { env } from "@/server/env";
+import { saveBlob } from "@/server/storage/local";
 
 export async function writeBytes(subdir: string, filename: string, bytes: Buffer) {
-  const fullDir = path.join(env.STORAGE_DIR, subdir);
-  await fs.mkdir(fullDir, { recursive: true });
-  const storagePath = path.join(fullDir, filename);
-  await fs.writeFile(storagePath, bytes);
+  const { storagePath } = await saveBlob({
+    dir: subdir,
+    filename,
+    bytes,
+    contentType: "application/xml",
+  });
   return { storagePath, byteSize: bytes.byteLength };
 }
 
@@ -38,4 +37,3 @@ export async function upsertExportArtifact(params: {
     },
   });
 }
-

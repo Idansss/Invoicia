@@ -1,11 +1,10 @@
-import fs from "node:fs/promises";
-
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
 import { prisma } from "@/server/db";
 import { rateLimit } from "@/server/rate-limit";
+import { readBlob } from "@/server/storage/local";
 
 export async function GET(
   req: Request,
@@ -37,7 +36,7 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Receipt not available." }, { status: 404 });
   }
 
-  const bytes = await fs.readFile(receipt.pdfPath);
+  const { bytes } = await readBlob(receipt.pdfPath);
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": "application/pdf",

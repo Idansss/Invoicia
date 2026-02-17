@@ -1,9 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import { renderToBuffer } from "@react-pdf/renderer";
 
-import { env } from "@/server/env";
+import { saveBlob } from "@/server/storage/local";
 
 export async function renderPdfToBuffer(doc: React.ReactElement) {
   // renderToBuffer returns a Node.js Buffer in Node runtimes
@@ -17,9 +14,11 @@ export async function writeArtifact(params: {
   filename: string;
   bytes: Buffer;
 }) {
-  const fullDir = path.join(env.STORAGE_DIR, params.subdir);
-  await fs.mkdir(fullDir, { recursive: true });
-  const storagePath = path.join(fullDir, params.filename);
-  await fs.writeFile(storagePath, params.bytes);
+  const { storagePath } = await saveBlob({
+    dir: params.subdir,
+    filename: params.filename,
+    bytes: params.bytes,
+    contentType: "application/pdf",
+  });
   return { storagePath };
 }

@@ -1,4 +1,3 @@
-import fs from "node:fs/promises"
 import path from "node:path"
 
 import { NextResponse } from "next/server"
@@ -8,7 +7,7 @@ export const runtime = "nodejs"
 import { auth } from "@/server/auth"
 import { prisma } from "@/server/db"
 import { auditEvent } from "@/server/services/audit"
-import { saveBlob } from "@/server/storage/local"
+import { deleteBlob, readBlob, saveBlob } from "@/server/storage/local"
 import { getActiveOrgId } from "@/server/tenant"
 
 function contentTypeFromFilename(filename: string) {
@@ -51,11 +50,11 @@ export async function GET() {
   }
 
   try {
-    const bytes = await fs.readFile(org.logoPath)
+    const { bytes, contentType } = await readBlob(org.logoPath)
     const filename = path.basename(org.logoPath)
     return new NextResponse(bytes, {
       headers: {
-        "Content-Type": contentTypeFromFilename(filename),
+        "Content-Type": contentType || contentTypeFromFilename(filename),
         "Cache-Control": "private, max-age=60",
       },
     })
@@ -93,6 +92,7 @@ export async function POST(request: Request) {
     dir: `org-logos/${context.orgId}`,
     filename: file.name,
     bytes,
+    contentType: file.type || undefined,
   })
 
   await prisma.organization.update({
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   })
 
   if (previous?.logoPath) {
-    void fs.unlink(previous.logoPath).catch(() => undefined)
+    void deleteBlob(previous.logoPath)
   }
 
   await auditEvent({
@@ -138,7 +138,7 @@ export async function DELETE() {
   })
 
   if (current?.logoPath) {
-    void fs.unlink(current.logoPath).catch(() => undefined)
+    void deleteBlob(current.logoPath)
   }
 
   await auditEvent({

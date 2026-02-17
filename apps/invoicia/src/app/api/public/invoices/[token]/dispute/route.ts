@@ -59,6 +59,7 @@ export async function POST(
       dir: `disputes/${invoice.id}`,
       filename: file.name,
       bytes,
+      contentType: file.type || undefined,
     });
     attachmentPath = stored.storagePath;
   }

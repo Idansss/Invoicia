@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -9,6 +7,7 @@ import { rateLimit } from "@/server/rate-limit";
 import { env } from "@/server/env";
 import { generateInvoicePdf, persistInvoicePdfArtifact } from "@/server/pdf/generate";
 import { upsertExportArtifact } from "@/server/artifacts";
+import { readBlob } from "@/server/storage/local";
 
 export async function GET(
   req: Request,
@@ -47,7 +46,7 @@ export async function GET(
     });
   }
 
-  const bytes = await fs.readFile(pdfPath);
+  const { bytes } = await readBlob(pdfPath);
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": "application/pdf",

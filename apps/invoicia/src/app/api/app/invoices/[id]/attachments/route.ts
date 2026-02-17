@@ -38,6 +38,7 @@ export async function POST(
     dir: `invoice-attachments/${invoice.id}`,
     filename: file.name,
     bytes,
+    contentType: file.type || undefined,
   });
 
   const attachment = await prisma.invoiceAttachment.create({
