@@ -10,6 +10,13 @@ import {
   type InvoiceWithBalance,
 } from "@/types/invoice"
 
+type CustomerRecord = {
+  id: string
+  name: string
+  email: string | null
+  defaultPaymentTermsDays: number
+}
+
 export default async function CustomersPage() {
   const { orgId } = await requireOrgRole(["OWNER", "ADMIN", "ACCOUNTANT", "STAFF", "READONLY"])
   const org = await prisma.organization.findUniqueOrThrow({
@@ -17,13 +24,23 @@ export default async function CustomersPage() {
     select: { currency: true },
   })
 
-  const [customers, invoices] = await Promise.all([
-    prisma.customer.findMany({ where: { orgId }, orderBy: { createdAt: "desc" } }),
-    prisma.invoice.findMany({
-      where: { orgId },
-      include: invoiceBalanceInclude,
-    }),
-  ])
+  const customersPromise: Promise<CustomerRecord[]> = prisma.customer.findMany({
+    where: { orgId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      defaultPaymentTermsDays: true,
+    },
+  }) as unknown as Promise<CustomerRecord[]>
+
+  const invoicesPromise = prisma.invoice.findMany({
+    where: { orgId },
+    include: invoiceBalanceInclude,
+  })
+
+  const [customers, invoices] = await Promise.all([customersPromise, invoicesPromise])
   const typedInvoices: InvoiceWithBalance[] = invoices
 
   const totalsByCustomer = new Map<string, { totalCents: number; outstandingCents: number }>()
@@ -44,7 +61,7 @@ export default async function CustomersPage() {
     })
   })
 
-  const rows: CustomerRow[] = customers.map((customer) => {
+  const rows: CustomerRow[] = customers.map((customer: CustomerRecord) => {
     const totals = totalsByCustomer.get(customer.id) ?? { totalCents: 0, outstandingCents: 0 }
     return {
       id: customer.id,
