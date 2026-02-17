@@ -39,6 +39,17 @@ interface CustomersClientProps {
   customers: CustomerRow[]
 }
 
+function initials(name: string | null | undefined) {
+  return (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word: string) => word[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
 export function CustomersClient({ customers }: CustomersClientProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
@@ -203,11 +214,7 @@ export function CustomersClient({ customers }: CustomersClientProps) {
                       <Link href={`/customers/${customer.id}`} className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {customer.name
-                              .split(" ")
-                              .map((w) => w[0])
-                              .join("")
-                              .slice(0, 2)}
+                            {initials(customer.name)}
                           </AvatarFallback>
                         </Avatar>
                         <div>

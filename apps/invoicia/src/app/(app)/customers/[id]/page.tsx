@@ -18,6 +18,17 @@ import {
   type InvoiceWithBalance,
 } from "@/types/invoice"
 
+function initials(name: string | null | undefined) {
+  return (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word: string) => word[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { orgId } = await requireOrgRole(["OWNER", "ADMIN", "ACCOUNTANT", "STAFF", "READONLY"])
@@ -70,11 +81,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-              {customer.name
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)}
+              {initials(customer.name)}
             </AvatarFallback>
           </Avatar>
           <div>
