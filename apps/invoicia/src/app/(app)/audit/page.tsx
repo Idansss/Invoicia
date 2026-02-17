@@ -13,6 +13,12 @@ type AuditEvent = {
   data?: unknown
 }
 
+type AuditActor = {
+  id: string
+  name: string | null
+  email: string
+}
+
 function isString(value: string | null | undefined): value is string {
   return Boolean(value)
 }
@@ -29,20 +35,22 @@ export default async function AuditLogPage() {
     where: { id: orgId },
     select: { timezone: true },
   })
-  const events = await prisma.auditEvent.findMany({
+  const events = (await prisma.auditEvent.findMany({
     where: { orgId },
     orderBy: { createdAt: "desc" },
     take: 100,
-  })
+  })) as AuditEvent[]
 
-  const actorIds = Array.from(new Set((events as AuditEvent[]).map((event) => event.actorUserId).filter(isString)))
-  const actors = actorIds.length
+  const actorIds = Array.from(new Set(events.map((event) => event.actorUserId).filter(isString)))
+  const actors: AuditActor[] = actorIds.length
     ? await prisma.user.findMany({
         where: { id: { in: actorIds } },
         select: { id: true, name: true, email: true },
       })
     : []
-  const actorById = new Map(actors.map((actor) => [actor.id, actor]))
+  const actorById = new Map<string, AuditActor>(
+    actors.map((actor: AuditActor) => [actor.id, actor] as const),
+  )
 
   const rows: AuditEventRow[] = events.map((event) => {
     const actor = event.actorUserId ? actorById.get(event.actorUserId) : null
