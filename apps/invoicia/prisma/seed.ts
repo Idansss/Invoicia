@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 import { hashPassword } from "../src/server/password";
 import { exportUbl21 } from "../src/compliance/renderers/ubl21";
@@ -315,9 +315,9 @@ async function main() {
   await prisma.auditEvent.createMany({
     data: [
       { orgId: org.id, actorUserId: owner.id, action: "seed.created", entityType: "Organization", entityId: org.id },
-      { orgId: org.id, actorUserId: owner.id, action: "invoice.created", entityType: "Invoice", entityId: draft.id, data: ({ number: draft.number } satisfies Prisma.InputJsonValue) },
-      { orgId: org.id, actorUserId: owner.id, action: "invoice.sent", entityType: "Invoice", entityId: sent.id, data: ({ number: sent.number } satisfies Prisma.InputJsonValue) },
-      { orgId: org.id, actorUserId: owner.id, action: "invoice.paid", entityType: "Invoice", entityId: paid.id, data: ({ number: paid.number } satisfies Prisma.InputJsonValue) },
+      { orgId: org.id, actorUserId: owner.id, action: "invoice.created", entityType: "Invoice", entityId: draft.id, data: { number: draft.number } },
+      { orgId: org.id, actorUserId: owner.id, action: "invoice.sent", entityType: "Invoice", entityId: sent.id, data: { number: sent.number } },
+      { orgId: org.id, actorUserId: owner.id, action: "invoice.paid", entityType: "Invoice", entityId: paid.id, data: { number: paid.number } },
     ],
   });
 
