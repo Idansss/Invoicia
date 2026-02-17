@@ -1,0 +1,82 @@
+{
+  "actions": [
+    {
+      "id": "423f5349-f023-42cb-ac19-698874b6c099",
+      "type": "payments.provider.connect",
+      "payload": {
+        "provider": "stripe"
+      },
+      "createdAt": "2026-02-12T19:27:30.137Z"
+    },
+    {
+      "id": "f309717b-9148-4126-b0ab-b79e50ffbdde",
+      "type": "templates.preview.pdf",
+      "payload": {
+        "templateId": "3",
+        "accentColor": "#6366f1"
+      },
+      "createdAt": "2026-02-12T19:27:11.970Z"
+    },
+    {
+      "id": "2515eeb0-4355-4f75-89ea-42f4c6030f54",
+      "type": "templates.preview.pdf",
+      "payload": {
+        "templateId": "3",
+        "accentColor": "#6366f1"
+      },
+      "createdAt": "2026-02-12T19:26:46.100Z"
+    },
+    {
+      "id": "ee831d9f-9c80-48a5-b5bb-eb8125d30aa9",
+      "type": "compliance.peppol.enable",
+      "payload": {
+        "profile": "peppol"
+      },
+      "createdAt": "2026-02-12T19:26:25.819Z"
+    },
+    {
+      "id": "8042a608-feb1-40ef-8500-67f59970afad",
+      "type": "compliance.peppol.enable",
+      "payload": {
+        "profile": "peppol"
+      },
+      "createdAt": "2026-02-12T19:26:25.534Z"
+    },
+    {
+      "id": "075a0932-0e64-4af7-9b20-46b6d3973de4",
+      "type": "compliance.peppol.enable",
+      "payload": {
+        "profile": "peppol"
+      },
+      "createdAt": "2026-02-12T19:26:24.716Z"
+    },
+    {
+      "id": "45713e88-23cc-43de-a5be-8bea95b5de4a",
+      "type": "compliance.peppol.enable",
+      "payload": {
+        "profile": "peppol"
+      },
+      "createdAt": "2026-02-12T19:26:20.847Z"
+    },
+    {
+      "id": "843a6beb-d9a6-4529-a089-088cc6a80609",
+      "type": "settings.organization.save",
+      "payload": {
+        "organizationName": "Acme Corporation",
+        "legalName": "Acme Corp Inc.",
+        "address": "123 Business Ave, Suite 100, San Francisco, CA 94101",
+        "timezone": "est",
+        "currency": "USD"
+      },
+      "createdAt": "2026-02-12T19:26:02.483Z"
+    },
+    {
+      "id": "fe98e739-b692-4132-8191-be17c5af75bb",
+      "type": "auth.login.google",
+      "payload": {
+        "provider": "google"
+      },
+      "createdAt": "2026-02-12T18:39:26.175Z"
+    }
+  ]
+}

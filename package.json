@@ -1,0 +1,28 @@
+{
+  "name": "invoicia-repo",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm dev:ui",
+    "check:utf8": "node scripts/check-utf8.mjs",
+    "dev:backend": "dotenv -e .env -- pnpm --filter invoicia dev",
+    "dev:ui": "node scripts/dev-ui.mjs",
+    "dev:ui:3000": "pnpm -C invoicia-saa-s-ui dev:3000",
+    "dev:ui:3001": "pnpm -C invoicia-saa-s-ui dev:3001",
+    "clean:ui": "pnpm -C invoicia-saa-s-ui clean",
+    "worker": "dotenv -e .env -- pnpm --filter invoicia worker",
+    "build": "dotenv -e .env -- pnpm --filter invoicia build",
+    "start": "dotenv -e .env -- pnpm --filter invoicia start",
+    "lint": "pnpm check:utf8 && pnpm --filter invoicia lint",
+    "format": "prettier -w .",
+    "db:migrate": "dotenv -e .env -- pnpm --filter invoicia db:migrate",
+    "db:seed": "dotenv -e .env -- pnpm --filter invoicia db:seed",
+    "db:studio": "dotenv -e .env -- pnpm --filter invoicia db:studio",
+    "test": "dotenv -e .env -- pnpm --filter invoicia test"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.4",
+    "prettier": "^3.5.1",
+    "prettier-plugin-tailwindcss": "^0.6.11"
+  }
+}

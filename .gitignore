@@ -1,0 +1,32 @@
+
+# OS / tooling
+.DS_Store
+Thumbs.db
+*.log
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node / Next
+node_modules
+.next
+out
+dist
+.turbo
+.vercel
+
+# Prisma
+apps/**/prisma/dev.db*
+
+# Local storage artifacts
+storage
+apps/**/storage
+
+# IDE
+.idea
+.vscode
+
+# Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

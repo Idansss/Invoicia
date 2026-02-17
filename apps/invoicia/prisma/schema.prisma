@@ -1,0 +1,608 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  STAFF
+  READONLY
+}
+
+enum CurrencyCode {
+  NGN
+  USD
+  EUR
+  GBP
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  OVERDUE
+  PAID
+  VOID
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  EXPIRED
+  CONVERTED
+  VOID
+}
+
+enum PaymentStatus {
+  REQUIRES_PAYMENT_METHOD
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum DisputeReasonCode {
+  WRONG_QUANTITY
+  WRONG_TAX
+  WRONG_PRICE
+  WRONG_PO
+  DUPLICATE_INVOICE
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum ComplianceProfileKey {
+  BASE
+  PEPPOL
+}
+
+enum ExportKind {
+  INVOICE_PDF
+  RECEIPT_PDF
+  UBL_XML
+  PEPPOL_UBL_XML
+}
+
+enum LateFeeType {
+  FLAT
+  PERCENT
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified DateTime?
+  image         String?
+
+  passwordHash  String?
+  defaultOrgId  String?
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecretEnc    String?
+  twoFactorTempSecretEnc String?
+  twoFactorEnabledAt    DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([defaultOrgId])
+}
+
+model Organization {
+  id                 String   @id @default(cuid())
+  name               String
+  legalName          String?
+  email              String?
+  phone              String?
+  addressLine1       String?
+  addressLine2       String?
+  city               String?
+  state              String?
+  postalCode         String?
+  countryCode        String?  // ISO 3166-1 alpha-2
+
+  currency           CurrencyCode @default(NGN)
+  timezone           String       @default("Africa/Lagos")
+
+  taxLabel           String? // e.g. "VAT"
+  taxPercent         Int?    // stored as whole percent, e.g. 7 for 7%
+  taxId              String?
+
+  invoicePrefix      String  @default("INV")
+  invoiceNextNumber  Int     @default(1)
+
+  complianceProfile  ComplianceProfileKey @default(BASE)
+
+  logoPath           String?
+  brandPrimaryColor  String? // hex
+  brandFont          String? // token/name
+
+  memberships        Membership[]
+  customers          Customer[]
+  products           Product[]
+  quotes             Quote[]
+  invoices           Invoice[]
+  invoiceAttachments InvoiceAttachment[]
+  payments           Payment[]
+  receipts           Receipt[]
+  creditNotes        CreditNote[]
+  reminderPolicies   ReminderPolicy[]
+  reminderJobLogs    ReminderJobLog[]
+  lateFeePolicies    LateFeePolicy[]
+  lateFeeApplications InvoiceLateFeeApplication[]
+  disputes           Dispute[]
+  auditEvents        AuditEvent[]
+  exportArtifacts    ExportArtifact[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Membership {
+  id        String          @id @default(cuid())
+  userId    String
+  orgId     String
+  role      MembershipRole  @default(STAFF)
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+model Customer {
+  id                     String   @id @default(cuid())
+  orgId                  String
+  name                   String
+  email                  String?
+  phone                  String?
+  addressLine1           String?
+  addressLine2           String?
+  city                   String?
+  state                  String?
+  postalCode             String?
+  countryCode            String?
+  taxId                  String?
+
+  preferredLanguage      String   @default("en")
+  defaultPaymentTermsDays Int     @default(14)
+  requirePurchaseOrder   Boolean  @default(false)
+
+  org                    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices               Invoice[]
+  quotes                 Quote[]
+  disputes               Dispute[]
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  orgId        String
+  name         String
+  description  String?
+  unitPriceCents Int
+  unit         String   @default("each")
+  taxCategory  String?  // e.g. "S" standard, "Z" zero
+  taxPercent   Int?     // override per product, whole percent
+
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoiceLineItems InvoiceLineItem[]
+  quoteLineItems   QuoteLineItem[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model Quote {
+  id           String     @id @default(cuid())
+  orgId        String
+  customerId   String
+  number       String
+  status       QuoteStatus @default(DRAFT)
+  currency     CurrencyCode @default(NGN)
+  notes        String?
+  expiresAt    DateTime?
+
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lineItems    QuoteLineItem[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([customerId])
+  @@unique([orgId, number])
+}
+
+model QuoteLineItem {
+  id            String   @id @default(cuid())
+  quoteId       String
+  productId     String?
+  description   String
+  quantity      Decimal  @db.Decimal(18, 6)
+  unitPriceCents Int
+  unit          String   @default("each")
+  taxCategory   String?
+  taxPercent    Int?
+  discountType  String? // "PERCENT" | "FIXED" (scaffold)
+  discountValue Int?    // percent whole or cents depending on type
+
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  orgId          String
+  customerId     String
+  number         String
+  token          String   @unique
+  status         InvoiceStatus @default(DRAFT)
+
+  currency       CurrencyCode @default(NGN)
+  issueDate      DateTime @default(now())
+  dueDate        DateTime?
+  paymentTermsDays Int    @default(14)
+  purchaseOrderNumber String?
+
+  notes          String?
+
+  discountType   String? // "PERCENT" | "FIXED" (MVP supports invoice-level)
+  discountValue  Int?    // percent whole or cents depending on type
+
+  taxLabel       String?
+  taxPercent     Int?
+
+  sentAt         DateTime?
+  viewedAt       DateTime?
+  paidAt         DateTime?
+  voidedAt       DateTime?
+
+  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lineItems      InvoiceLineItem[]
+  attachments    InvoiceAttachment[]
+  payments       Payment[]
+  receipts       Receipt[]
+  creditNotes    CreditNote[]
+  disputes       Dispute[]
+  reminderLogs   ReminderJobLog[]
+  lateFeeApplications InvoiceLateFeeApplication[]
+  validationResults ComplianceValidationResult[]
+  exportArtifacts ExportArtifact[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([customerId, status, dueDate])
+  @@unique([orgId, number])
+}
+
+model InvoiceLineItem {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  productId      String?
+  description    String
+  quantity       Decimal  @db.Decimal(18, 6)
+  unitPriceCents Int
+  unit           String   @default("each")
+  taxCategory    String?
+  taxPercent     Int?
+  discountType   String? // "PERCENT" | "FIXED" (MVP supports per-line)
+  discountValue  Int?
+
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+}
+
+model InvoiceAttachment {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  orgId      String
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  storagePath String
+
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  orgId           String
+  invoiceId       String
+  provider        String   @default("stripe")
+  providerRef     String?  // checkout session id or payment intent id
+  status          PaymentStatus @default(PENDING)
+  amountCents     Int
+  currency        CurrencyCode @default(NGN)
+  buyerEmail      String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice         Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  receipt         Receipt?
+
+  @@index([orgId])
+  @@index([invoiceId])
+  @@index([provider, providerRef])
+}
+
+model Receipt {
+  id          String   @id @default(cuid())
+  orgId       String
+  invoiceId   String
+  paymentId   String
+  receiptNumber String
+  pdfPath     String?
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment     Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  exportArtifacts ExportArtifact[]
+
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+  @@unique([orgId, receiptNumber])
+  @@unique([paymentId])
+}
+
+model CreditNote {
+  id           String   @id @default(cuid())
+  orgId        String
+  invoiceId    String
+  number       String
+  reason       String?
+  amountCents  Int
+
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+  @@unique([orgId, number])
+}
+
+model ReminderPolicy {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String   @default("Default")
+  enabled   Boolean  @default(true)
+
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rules     ReminderRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model ReminderRule {
+  id           String   @id @default(cuid())
+  policyId     String
+  daysOffset   Int      // -3 = 3 days before due, 0 = on due, 7 = 7 days after
+  templateKey  String   @default("friendly") // friendly|firm (MVP)
+  enabled      Boolean  @default(true)
+
+  policy       ReminderPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([policyId])
+}
+
+model ReminderJobLog {
+  id         String   @id @default(cuid())
+  orgId      String
+  invoiceId  String
+  ruleId     String?
+  status     String   // SENT|FAILED|SKIPPED
+  error      String?
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model LateFeePolicy {
+  id           String   @id @default(cuid())
+  orgId        String
+  enabled      Boolean  @default(false)
+  type         LateFeeType @default(FLAT)
+  amountCents  Int?     // for FLAT
+  percent      Int?     // for PERCENT, whole percent
+  daysAfterDue Int      @default(7)
+  name         String   @default("Default")
+
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+model InvoiceLateFeeApplication {
+  id          String   @id @default(cuid())
+  orgId       String
+  invoiceId   String
+  policyId    String
+  appliedAt   DateTime @default(now())
+  amountCents Int
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, policyId])
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model Dispute {
+  id           String   @id @default(cuid())
+  orgId        String
+  invoiceId    String
+  customerId   String
+
+  reasonCode   DisputeReasonCode
+  message      String?
+  status       DisputeStatus @default(OPEN)
+  attachmentPath String?
+
+  sellerResponse String?
+
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  orgId       String
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String
+  ip          String?
+  userAgent   String?
+  data        Json?
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([entityType, entityId])
+}
+
+model ComplianceValidationResult {
+  id          String   @id @default(cuid())
+  orgId       String
+  invoiceId   String
+  profileKey  ComplianceProfileKey
+  isValid     Boolean
+  errors      Json?
+
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+}
+
+model ExportArtifact {
+  id          String   @id @default(cuid())
+  orgId       String
+  invoiceId   String?
+  receiptId   String?
+  kind        ExportKind
+  storagePath String
+  mimeType    String
+  byteSize    Int?
+
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  receipt     Receipt? @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([invoiceId])
+  @@index([receiptId])
+}
+
+// Auth.js / NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
