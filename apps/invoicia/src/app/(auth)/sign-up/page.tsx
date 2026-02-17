@@ -27,6 +27,21 @@ export default function SignUpPage() {
     password: "",
   });
 
+  async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("REQUEST_TIMEOUT")), timeoutMs);
+      promise
+        .then((result) => {
+          clearTimeout(timeout);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
+  }
+
   const handleEmailSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -48,32 +63,51 @@ export default function SignUpPage() {
       return;
     }
 
-    setEmailLoading(true);
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
     const name = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
-    const result = await signUpAction({
-      name,
-      email: formData.email,
-      password: formData.password,
-    });
-    if (!result.ok) {
-      setError(result.error);
-      setEmailLoading(false);
-      return;
-    }
 
-    const signInResult = await signIn("credentials", {
-      email: formData.email,
-      password: formData.password,
-      redirect: false,
-    });
-    if (signInResult?.error) {
-      setError("Account created, but sign-in failed. Try signing in.");
-      router.push("/sign-in");
+    setEmailLoading(true);
+    try {
+      const result = await withTimeout(
+        signUpAction({
+          name,
+          email,
+          password,
+        }),
+        20000
+      );
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      const signInResult = await withTimeout(
+        signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        }),
+        20000
+      );
+
+      if (!signInResult || signInResult.error) {
+        setError("Account created, but sign-in failed. Try signing in.");
+        router.push(`/sign-in?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      router.push("/app");
+    } catch (error) {
+      if (error instanceof Error && error.message === "REQUEST_TIMEOUT") {
+        setError("Request timed out. Please try again.");
+        return;
+      }
+      setError("Unable to create account right now. Please try again.");
+    } finally {
       setEmailLoading(false);
-      return;
     }
-    router.push("/app");
-    setEmailLoading(false);
   };
 
   const handleGoogleSignUp = async () => {
