@@ -262,14 +262,14 @@ export default function LandingPage() {
                     <Clock3 className="h-4 w-4" />
                     Avg. payment time
                   </p>
-                  <p className="mt-2 text-3xl font-semibold">3.2 days</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">3.2 days</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <p className="flex items-center gap-2 text-sm text-white/75">
                     <Zap className="h-4 w-4 text-emerald-400" />
                     On-time rate
                   </p>
-                  <p className="mt-2 text-3xl font-semibold">94%</p>
+                  <p className="mt-2 text-3xl font-semibold text-white">94%</p>
                 </div>
               </div>
 
@@ -335,7 +335,7 @@ export default function LandingPage() {
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5">
                     <feature.icon className="h-6 w-6 text-indigo-300" />
                   </div>
-                  <h3 className="text-3xl font-semibold tracking-tight">{feature.title}</h3>
+                  <h3 className="text-3xl font-semibold tracking-tight text-white">{feature.title}</h3>
                   <p className="mt-3 text-lg leading-relaxed text-white/80">{feature.description}</p>
                 </Card>
               ))}
@@ -406,7 +406,7 @@ export default function LandingPage() {
                   <div className="mb-6">
                     <p className="text-sm font-semibold text-indigo-300 uppercase tracking-widest">{plan.name}</p>
                     <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
+                      <span className="text-4xl font-bold tracking-tight text-white">{plan.price}</span>
                       <span className="text-sm text-white/50">/{plan.period}</span>
                     </div>
                     <p className="mt-2 text-sm text-white/60">{plan.description}</p>
@@ -453,7 +453,7 @@ export default function LandingPage() {
                   <div className="mt-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5">
                     <step.icon className="h-6 w-6 text-indigo-300" />
                   </div>
-                  <h3 className="mt-5 text-3xl font-semibold tracking-tight">{step.title}</h3>
+                  <h3 className="mt-5 text-3xl font-semibold tracking-tight text-white">{step.title}</h3>
                   <p className="mt-3 text-lg leading-relaxed text-white/80">{step.description}</p>
                 </Card>
               ))}
@@ -464,7 +464,7 @@ export default function LandingPage() {
         <section id="get-started" className="pb-20 pt-6">
           <div className="mx-auto max-w-6xl px-6">
             <Card className="rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_100%,rgba(98,80,255,0.24),rgba(13,15,29,0.95)_55%)] px-6 py-12 text-center sm:px-10">
-              <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">Ready to get paid faster?</h2>
+              <h2 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">Ready to get paid faster?</h2>
               <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-white/80 sm:text-xl">
                 Join thousands of businesses using Invoicia to streamline their billing and improve cash flow.
               </p>
