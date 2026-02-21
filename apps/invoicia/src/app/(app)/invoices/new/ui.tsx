@@ -141,15 +141,21 @@ export function InvoiceBuilder(props: {
   async function onSubmit(values: FormValues) {
     try {
       // Convert dollar amounts to cents before sending to server
+      const rawDiscount = Number(values.discountValue || 0);
       const payload = {
         ...values,
         lineItems: values.lineItems.map((li) => ({
           ...li,
-          unitPriceCents: String(Math.round(Number(li.unitPriceCents || 0) * 100)),
+          unitPriceCents: Math.round(Number(li.unitPriceCents || 0) * 100),
         })),
-        discountValue: discountEnabled && values.discountValue && values.discountType === "FIXED"
-          ? String(Math.round(Number(values.discountValue) * 100))
-          : values.discountValue,
+        // PERCENT: send integer percentage (e.g. 10, not "10" or 10.5)
+        // FIXED:   send integer cents (e.g. 500 for $5.00)
+        // disabled: omit entirely so the server doesn't receive a stale value
+        discountValue: discountEnabled && rawDiscount
+          ? values.discountType === "FIXED"
+            ? Math.round(rawDiscount * 100)
+            : Math.round(rawDiscount)
+          : undefined,
         sendNow: submitIntent === "send",
       };
       await createInvoiceAction(payload);
