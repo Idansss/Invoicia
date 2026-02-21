@@ -137,7 +137,7 @@ function toOrganizationForm(org: OrganizationSettings): OrganizationFormState {
     city: org.city || "",
     state: org.state || "",
     postalCode: org.postalCode || "",
-    countryCode: org.countryCode || "",
+    countryCode: org.countryCode || "US",
     timezone: org.timezone || "UTC",
     currency: org.currency || "USD",
     invoicePrefix: org.invoicePrefix || "INV",
@@ -353,7 +353,7 @@ export default function SettingsClient({
       setTwoFactorQrCode(result.qrCodeDataUrl)
       setTwoFactorManualKey(result.manualEntryKey)
       setTwoFactorCode("")
-      toast.success("Scan the QR code and enter the 6-digit code to finish setup.")
+      setTwoFactorSetupOpen(true)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start 2FA setup")
     } finally {
@@ -712,7 +712,7 @@ export default function SettingsClient({
                     <div className="space-y-2">
                       <Label className="text-xs">Country</Label>
                       <Select
-                        value={organizationForm.countryCode || "US"}
+                        value={organizationForm.countryCode}
                         onValueChange={(value) => updateOrganization("countryCode", value)}
                         disabled={!canEditOrganization}
                       >
@@ -843,6 +843,7 @@ export default function SettingsClient({
                     ref={logoInputRef}
                     type="file"
                     accept="image/*"
+                    aria-label="Upload company logo"
                     className="hidden"
                     onChange={handleLogoUpload}
                   />
@@ -1068,28 +1069,27 @@ export default function SettingsClient({
               </div>
 
               {!twoFactorEnabled ? (
-                <Dialog
-                  open={twoFactorSetupOpen}
-                  onOpenChange={(open) => {
-                    setTwoFactorSetupOpen(open)
-                    if (!open) {
-                      setTwoFactorCode("")
-                      setTwoFactorQrCode("")
-                      setTwoFactorManualKey("")
-                    }
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      onClick={handleStartTwoFactorSetup}
-                      disabled={twoFactorSetupLoading}
-                    >
-                      {twoFactorSetupLoading ? "Preparing..." : "Set up 2FA"}
-                    </Button>
-                  </DialogTrigger>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={handleStartTwoFactorSetup}
+                    disabled={twoFactorSetupLoading}
+                  >
+                    {twoFactorSetupLoading ? "Preparing..." : "Set up 2FA"}
+                  </Button>
+                  <Dialog
+                    open={twoFactorSetupOpen}
+                    onOpenChange={(open) => {
+                      setTwoFactorSetupOpen(open)
+                      if (!open) {
+                        setTwoFactorCode("")
+                        setTwoFactorQrCode("")
+                        setTwoFactorManualKey("")
+                      }
+                    }}
+                  >
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Set up two-factor authentication</DialogTitle>
@@ -1135,6 +1135,7 @@ export default function SettingsClient({
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                </>
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="disable-two-factor-code" className="text-xs">
@@ -1210,7 +1211,18 @@ export default function SettingsClient({
         </TabsContent>
 
         <TabsContent value="billing" className="mt-4 space-y-6">
-          <Card>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 flex items-start gap-3">
+            <CreditCard className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Stripe billing — coming soon</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                Subscription management and payment method updates via Stripe are under development.
+                The plan and payment details below are illustrative.
+              </p>
+            </div>
+          </div>
+
+          <Card className="opacity-60 pointer-events-none select-none">
             <CardHeader>
               <CardTitle className="text-base font-semibold">Current plan</CardTitle>
               <CardDescription>Active subscription and entitlement settings.</CardDescription>
@@ -1219,16 +1231,16 @@ export default function SettingsClient({
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Professional</p>
-                  <p className="text-xs text-muted-foreground">$29/month - Unlimited invoices, 5 team members</p>
+                  <p className="text-xs text-muted-foreground">$29/month · Unlimited invoices, 5 team members</p>
                 </div>
-                <Button variant="outline" size="sm" type="button" onClick={handleUpgrade} disabled={upgradeLoading || !canManageBilling}>
-                  {upgradeLoading ? "Starting..." : "Upgrade plan"}
+                <Button variant="outline" size="sm" type="button" disabled>
+                  Upgrade plan
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="opacity-60 pointer-events-none select-none">
             <CardHeader>
               <CardTitle className="text-base font-semibold">Payment method</CardTitle>
               <CardDescription>Manage payout and billing card details.</CardDescription>
@@ -1237,11 +1249,11 @@ export default function SettingsClient({
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
                 <CreditCard className="h-5 w-5 text-muted-foreground" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Visa ending in 4242</p>
-                  <p className="text-xs text-muted-foreground">Expires 12/2027</p>
+                  <p className="text-sm font-medium text-foreground">Not yet configured</p>
+                  <p className="text-xs text-muted-foreground">Stripe integration coming soon</p>
                 </div>
-                <Button variant="ghost" size="sm" type="button" onClick={handleUpdatePayment} disabled={paymentUpdateLoading || !canManageBilling}>
-                  {paymentUpdateLoading ? "Updating..." : "Update payment"}
+                <Button variant="ghost" size="sm" type="button" disabled>
+                  Update payment
                 </Button>
               </div>
             </CardContent>

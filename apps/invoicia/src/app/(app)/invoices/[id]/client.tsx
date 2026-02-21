@@ -10,7 +10,6 @@ import {
   Link2,
   Download,
   FileCode,
-  Edit,
   Copy,
   MoreHorizontal,
   Calendar,
@@ -70,6 +69,14 @@ interface InvoiceAttachmentRow {
   storagePath: string
 }
 
+interface InvoiceAuditEventRow {
+  id: string
+  action: string
+  actorName: string | null
+  actorEmail: string | null
+  createdAt: string
+}
+
 interface InvoiceDetailProps {
   invoice: {
     id: string
@@ -100,15 +107,17 @@ interface InvoiceDetailProps {
   }
   currency: "NGN" | "USD" | "EUR" | "GBP"
   timezone: string
+  auditEvents: InvoiceAuditEventRow[]
 }
 
-export function InvoiceDetailClient({ invoice, totals, currency, timezone }: InvoiceDetailProps) {
+export function InvoiceDetailClient({ invoice, totals, currency, timezone, auditEvents }: InvoiceDetailProps) {
   const router = useRouter()
   const [copying, setCopying] = useState(false)
   const [sending, setSending] = useState(false)
   const [voiding, setVoiding] = useState(false)
   const [recordingPayment, setRecordingPayment] = useState(false)
   const [issuingCredit, setIssuingCredit] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
   const [manualPaymentCents, setManualPaymentCents] = useState("")
   const [creditAmountCents, setCreditAmountCents] = useState("")
   const [creditReason, setCreditReason] = useState("")
@@ -159,13 +168,14 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
 
   const handleRecordPayment = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!manualPaymentCents) {
-      toast.error("Enter an amount")
+    const parsed = parseFloat(manualPaymentCents)
+    if (!manualPaymentCents || isNaN(parsed) || parsed <= 0) {
+      toast.error("Enter a valid amount")
       return
     }
     setRecordingPayment(true)
     try {
-      await recordManualPaymentUiAction(invoice.id, { amountCents: manualPaymentCents })
+      await recordManualPaymentUiAction(invoice.id, { amountCents: String(Math.round(parsed * 100)) })
       toast.success("Payment recorded")
       setManualPaymentCents("")
       router.refresh()
@@ -178,13 +188,14 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
 
   const handleIssueCredit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!creditAmountCents) {
-      toast.error("Enter a credit amount")
+    const parsed = parseFloat(creditAmountCents)
+    if (!creditAmountCents || isNaN(parsed) || parsed <= 0) {
+      toast.error("Enter a valid credit amount")
       return
     }
     setIssuingCredit(true)
     try {
-      await createCreditNoteUiAction(invoice.id, { amountCents: creditAmountCents, reason: creditReason })
+      await createCreditNoteUiAction(invoice.id, { amountCents: String(Math.round(parsed * 100)), reason: creditReason })
       toast.success("Credit note issued")
       setCreditAmountCents("")
       setCreditReason("")
@@ -210,17 +221,46 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
     }
   }
 
-  const handleApproveDispute = async (disputeId: string, amountCents: string, reason: string) => {
-    if (!amountCents) {
-      toast.error("Enter a credit amount")
+  const handleApproveDispute = async (disputeId: string, amountDollars: string, reason: string) => {
+    const parsed = parseFloat(amountDollars)
+    if (!amountDollars || isNaN(parsed) || parsed <= 0) {
+      toast.error("Enter a valid credit amount")
       return
     }
+    const amountCents = String(Math.round(parsed * 100))
     try {
       await approveDisputeWithCreditNoteAction(invoice.id, { disputeId, amountCents, reason })
       toast.success("Dispute approved")
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to approve dispute")
+    }
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File must be under 10MB")
+      event.target.value = ""
+      return
+    }
+    setUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch(`/api/app/invoices/${invoice.id}/attachments`, { method: "POST", body: formData })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null
+        throw new Error(body?.error ?? "Upload failed")
+      }
+      toast.success(`${file.name} uploaded`)
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload file")
+    } finally {
+      setUploadingFile(false)
+      event.target.value = ""
     }
   }
 
@@ -264,11 +304,6 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/invoices/${invoice.id}`}>
-                  <Edit className="h-4 w-4 mr-2" /> Edit
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href={`/api/app/invoices/${invoice.id}/xml`} target="_blank">
                   <FileCode className="h-4 w-4 mr-2" /> Export XML
                 </Link>
@@ -286,7 +321,11 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
               >
                 <Copy className="h-4 w-4 mr-2" /> Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onSelect={handleVoidInvoice}>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={handleVoidInvoice}
+                disabled={invoice.status === "PAID" || invoice.status === "VOID"}
+              >
                 <Ban className="h-4 w-4 mr-2" /> {voiding ? "Voiding..." : "Void"}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -389,9 +428,26 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
 
             <TabsContent value="activity" className="mt-4">
               <Card>
-                <CardContent className="pt-6 text-center py-8">
-                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" />
-                  <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
+                <CardContent className="pt-6 space-y-3">
+                  {auditEvents.length === 0 ? (
+                    <div className="text-center py-6">
+                      <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40 text-muted-foreground" />
+                      <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
+                    </div>
+                  ) : (
+                    auditEvents.map((event) => (
+                      <div key={event.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                        <div className="flex-shrink-0 mt-2 w-2 h-2 rounded-full bg-primary/50" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground font-medium">{event.action.replace(/_/g, " ").toLowerCase()}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {event.actorName ?? event.actorEmail ?? "System"} &middot;{" "}
+                            {formatDateTime(new Date(event.createdAt), timezone)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -434,7 +490,7 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
                           <div className="grid gap-2">
                             <Label className="text-xs">Approve with credit note</Label>
                             <div className="grid gap-2">
-                              <Input className="h-9" type="number" placeholder="Credit amount (cents)" id={`approve-${dispute.id}`} />
+                              <Input className="h-9" type="number" min="0.01" step="0.01" placeholder="Credit amount (e.g. 100.00)" id={`approve-${dispute.id}`} />
                               <Input className="h-9" placeholder="Reason (optional)" id={`approve-reason-${dispute.id}`} />
                             </div>
                             <Button
@@ -469,16 +525,20 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
             <TabsContent value="files" className="mt-4">
               <Card>
                 <CardContent className="pt-6 space-y-4">
-                  <div className="text-sm text-muted-foreground">Attachments</div>
-                  <form
-                    action={`/api/app/invoices/${invoice.id}/attachments`}
-                    method="post"
-                    encType="multipart/form-data"
-                    className="flex flex-wrap items-center gap-2"
-                  >
-                    <input name="file" type="file" className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
-                    <Button type="submit" variant="secondary">Upload</Button>
-                  </form>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">Attachments</div>
+                    <label className={`cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent ${uploadingFile ? "opacity-50 pointer-events-none" : ""}`}>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+                        className="sr-only"
+                        onChange={handleFileUpload}
+                        disabled={uploadingFile}
+                        aria-label="Upload attachment"
+                      />
+                      {uploadingFile ? "Uploading…" : "Upload file"}
+                    </label>
+                  </div>
                   <div className="space-y-2">
                     {invoice.attachments.map((file) => (
                       <div key={file.id} className="rounded-lg border border-border p-3">
@@ -499,18 +559,34 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
             <TabsContent value="compliance" className="mt-4">
               <Card>
                 <CardContent className="pt-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">PDF generated</span>
-                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">Complete</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">XML export available</span>
-                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">Complete</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground">Compliance profile</span>
-                    <Badge variant="outline" className="text-xs">{invoice.complianceProfile}</Badge>
-                  </div>
+                  {(() => {
+                    const hasPdf = invoice.exportArtifacts.some((a) => a.kind === "INVOICE_PDF")
+                    const hasXml = invoice.exportArtifacts.some((a) => a.kind === "UBL_XML" || a.kind === "PEPPOL_UBL_XML")
+                    return (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">PDF generated</span>
+                          {hasPdf ? (
+                            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">Complete</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">Not generated</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">XML export available</span>
+                          {hasXml ? (
+                            <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">Complete</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">Not exported</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Compliance profile</span>
+                          <Badge variant="outline" className="text-xs">{invoice.complianceProfile}</Badge>
+                        </div>
+                      </>
+                    )
+                  })()}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -567,14 +643,16 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
             </CardHeader>
             <CardContent className="space-y-4">
               <form className="space-y-2" onSubmit={handleRecordPayment}>
-                <Label className="text-xs">Record manual payment (cents)</Label>
+                <Label className="text-xs">Record manual payment</Label>
                 <div className="flex gap-2">
                   <Input
                     className="h-9"
                     type="number"
+                    min="0.01"
+                    step="0.01"
                     value={manualPaymentCents}
                     onChange={(event) => setManualPaymentCents(event.target.value)}
-                    placeholder="50000"
+                    placeholder="500.00"
                   />
                   <Button type="submit" variant="secondary" disabled={recordingPayment}>
                     <Wallet className="mr-2 h-4 w-4" /> {recordingPayment ? "Recording" : "Record"}
@@ -583,13 +661,15 @@ export function InvoiceDetailClient({ invoice, totals, currency, timezone }: Inv
               </form>
 
               <form className="space-y-2" onSubmit={handleIssueCredit}>
-                <Label className="text-xs">Issue credit note (cents)</Label>
+                <Label className="text-xs">Issue credit note</Label>
                 <Input
                   className="h-9"
                   type="number"
+                  min="0.01"
+                  step="0.01"
                   value={creditAmountCents}
                   onChange={(event) => setCreditAmountCents(event.target.value)}
-                  placeholder="10000"
+                  placeholder="100.00"
                 />
                 <Input
                   className="h-9"

@@ -171,9 +171,26 @@ export function ProductsClient({ products }: ProductsClientProps) {
         <CardContent className="p-0">
           <div className="divide-y">
             {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
-                <Package className="h-8 w-8 opacity-40" />
-                <p className="text-sm font-medium">No products found</p>
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                <Package className="h-10 w-10 opacity-30" />
+                {products.length === 0 ? (
+                  <>
+                    <p className="text-sm font-semibold text-foreground">No products yet</p>
+                    <p className="text-xs text-muted-foreground">Create catalog items to quickly fill invoices.</p>
+                    <button
+                      type="button"
+                      className="rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                      onClick={() => setDialogOpen(true)}
+                    >
+                      Add product
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium">No products match your search</p>
+                    <p className="text-xs">Try a different keyword.</p>
+                  </>
+                )}
               </div>
             ) : (
               filtered.map((product) => (

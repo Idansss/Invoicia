@@ -36,7 +36,7 @@ export default async function HostedInvoicePage({
   const invoice = await prisma.invoice.findFirst({
     where: { token },
     include: {
-      org: { select: { name: true, currency: true, timezone: true } },
+      org: { select: { name: true, currency: true, timezone: true, email: true } },
       customer: true,
       lineItems: true,
       payments: true,
@@ -263,7 +263,7 @@ export default async function HostedInvoicePage({
               Invoicia
             </Link>
             . Questions? Contact{" "}
-            <span className="text-foreground">{invoice.customer.email ?? "billing@invoicia.com"}</span>
+            <span className="text-foreground">{invoice.org.email ?? invoice.org.name}</span>
           </p>
         </footer>
       </main>

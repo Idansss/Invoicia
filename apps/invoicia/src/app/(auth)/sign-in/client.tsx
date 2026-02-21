@@ -32,6 +32,7 @@ export function SignInClient() {
       ? "Two-factor authentication is enabled for this account. Sign in with email, password, and authenticator code."
       : null;
   const [error, setError] = useState<string | null>(null);
+  const [showTwoFactor, setShowTwoFactor] = useState(!!routedError);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "", twoFactorCode: "" },
@@ -48,14 +49,17 @@ export function SignInClient() {
     });
     if (result?.error) {
       if (result.error.includes("2FA_REQUIRED")) {
+        setShowTwoFactor(true);
         setError("Two-factor code required. Enter your 6-digit authenticator code.");
         return;
       }
       if (result.error.includes("2FA_INVALID")) {
+        setShowTwoFactor(true);
         setError("Invalid two-factor code. Try the latest code from your authenticator app.");
         return;
       }
       if (result.error.includes("2FA_NOT_CONFIGURED")) {
+        setShowTwoFactor(true);
         setError("2FA is enabled but not fully configured. Contact support.");
         return;
       }
@@ -80,7 +84,7 @@ export function SignInClient() {
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-balance">Invoicing that works as hard as you do.</h1>
-            <p className="mt-3 text-base opacity-70 leading-relaxed">
+            <p className="mt-3 text-base opacity-85 leading-relaxed">
               Create, send, and track professional invoices in seconds. Get paid faster with automated reminders and seamless payment integrations.
             </p>
           </div>
@@ -100,7 +104,7 @@ export function SignInClient() {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-4 text-xs opacity-50">
+        <div className="flex items-center gap-4 text-xs opacity-65">
           <span>Trusted by 2,000+ businesses</span>
           <span>{"SOC 2 Compliant"}</span>
           <span>{"99.9% Uptime"}</span>
@@ -140,7 +144,12 @@ export function SignInClient() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -149,17 +158,20 @@ export function SignInClient() {
                   {...form.register("password")}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="twoFactorCode">Authenticator code (if enabled)</Label>
-                <Input
-                  id="twoFactorCode"
-                  inputMode="numeric"
-                  placeholder="123456"
-                  className="h-11"
-                  {...form.register("twoFactorCode")}
-                />
-              </div>
-              {error ?? routedError ? (
+              {showTwoFactor ? (
+                <div className="space-y-2">
+                  <Label htmlFor="twoFactorCode">Authenticator code</Label>
+                  <Input
+                    id="twoFactorCode"
+                    inputMode="numeric"
+                    placeholder="123456"
+                    className="h-11"
+                    autoFocus
+                    {...form.register("twoFactorCode")}
+                  />
+                </div>
+              ) : null}
+              {(error ?? routedError) ? (
                 <p className="text-sm text-red-600" role="alert">
                   {error ?? routedError}
                 </p>

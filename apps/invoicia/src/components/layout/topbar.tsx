@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { useTheme } from "next-themes"
 import { signOut } from "next-auth/react"
 import {
@@ -30,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { setActiveOrgAction } from "@/components/app/actions"
 
 interface TopbarProps {
@@ -58,6 +58,15 @@ function getInitials(name?: string | null, email?: string | null) {
 export function Topbar({ onMobileMenuToggle, orgName, orgs, activeOrgId, orgLogoUrl, user }: TopbarProps) {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+
+  const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && searchQuery.trim()) {
+      router.push(`/invoices?search=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery("")
+    }
+  }
 
   const handleOrgSwitch = async (orgId: string, name: string) => {
     if (!orgId || orgId === activeOrgId) return
@@ -71,22 +80,56 @@ export function Topbar({ onMobileMenuToggle, orgName, orgs, activeOrgId, orgLogo
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMobileMenuToggle}>
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search invoices, customers, products..."
-            className="w-64 lg:w-80 pl-9 h-9 bg-secondary/50 border-0 focus-visible:ring-1"
-          />
+    <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-sm">
+      {mobileSearchOpen ? (
+        <div className="flex h-14 items-center gap-2 px-4 sm:hidden">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              className="w-full pl-9 h-9 bg-secondary/50 border-0 focus-visible:ring-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { handleSearch(e); if (e.key === "Enter") setMobileSearchOpen(false); }}
+              autoFocus
+              aria-label="Search invoices"
+            />
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => { setMobileSearchOpen(false); setSearchQuery(""); }}>
+            Cancel
+          </Button>
         </div>
-      </div>
+      ) : null}
+      <div className={`flex h-16 items-center justify-between px-4 lg:px-6 ${mobileSearchOpen ? "hidden sm:flex" : "flex"}`}>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMobileMenuToggle}>
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              className="w-64 lg:w-80 pl-9 h-9 bg-secondary/50 border-0 focus-visible:ring-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              aria-label="Search invoices"
+            />
+          </div>
+        </div>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 sm:hidden"
+          onClick={() => setMobileSearchOpen(true)}
+          aria-label="Search"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+
         <Button size="sm" className="hidden sm:flex gap-1.5 h-9 font-medium" asChild>
           <Link href="/invoices/new">
             <Plus className="h-4 w-4" />
@@ -97,10 +140,7 @@ export function Topbar({ onMobileMenuToggle, orgName, orgs, activeOrgId, orgLogo
         <Button variant="ghost" size="icon" className="relative h-9 w-9" asChild>
           <Link href="/reminders">
             <Bell className="h-4 w-4" />
-            <Badge className="absolute -top-0.5 -right-0.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-destructive text-destructive-foreground border-0">
-              3
-            </Badge>
-            <span className="sr-only">Notifications</span>
+            <span className="sr-only">Reminders</span>
           </Link>
         </Button>
 
@@ -163,9 +203,9 @@ export function Topbar({ onMobileMenuToggle, orgName, orgs, activeOrgId, orgLogo
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings">
+              <Link href="/settings?tab=security">
                 <User className="h-4 w-4 mr-2" />
-                Profile
+                Profile &amp; Security
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -181,6 +221,7 @@ export function Topbar({ onMobileMenuToggle, orgName, orgs, activeOrgId, orgLogo
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
       </div>
     </header>
   )

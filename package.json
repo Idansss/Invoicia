@@ -19,7 +19,8 @@
     "db:migrate": "dotenv -e .env -- pnpm --filter invoicia db:migrate",
     "db:seed": "dotenv -e .env -- pnpm --filter invoicia db:seed",
     "db:studio": "dotenv -e .env -- pnpm --filter invoicia db:studio",
-    "test": "dotenv -e .env -- pnpm --filter invoicia test"
+    "test": "dotenv -e .env -- pnpm --filter invoicia test",
+    "test:e2e": "dotenv -e .env -- pnpm --filter invoicia test:e2e"
   },
   "devDependencies": {
     "dotenv-cli": "^7.4.4",

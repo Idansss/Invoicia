@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
@@ -23,7 +23,7 @@ import { Card } from "@/components/ui/card";
 const navLinks = [
   { label: "Product", href: "#product" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#docs" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "Changelog", href: "#changelog" },
 ];
 
@@ -82,22 +82,46 @@ const steps = [
   },
 ];
 
-const footerColumns = [
+const footerColumns: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Product",
-    links: ["Features", "Pricing", "API", "Changelog", "Documentation"],
+    links: [
+      { label: "Features", href: "#product" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "API", href: "#" },
+      { label: "Changelog", href: "#changelog" },
+      { label: "Documentation", href: "#" },
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Blog", "Careers", "Press", "Partners"],
+    links: [
+      { label: "About", href: "#" },
+      { label: "Blog", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Press", href: "#" },
+      { label: "Partners", href: "#" },
+    ],
   },
   {
     title: "Resources",
-    links: ["Community", "Support", "Status", "Templates", "Guides"],
+    links: [
+      { label: "Community", href: "#" },
+      { label: "Support", href: "#" },
+      { label: "Status", href: "#" },
+      { label: "Templates", href: "#" },
+      { label: "Guides", href: "#" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms", "Security", "Compliance", "Cookies"],
+    links: [
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "Security", href: "#" },
+      { label: "Compliance", href: "#" },
+      { label: "Cookies", href: "#" },
+    ],
   },
 ];
 
@@ -158,7 +182,7 @@ export default function LandingPage() {
                 <span className="text-indigo-300">professionally</span>
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/65 sm:text-xl">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80 sm:text-xl">
                 Create stunning, compliant invoices in seconds. Get paid faster with
                 automated reminders, global payment options, and real-time tracking.
               </p>
@@ -174,15 +198,16 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button
-                  asChild
                   variant="secondary"
-                  className="h-12 rounded-2xl border border-white/10 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/10"
+                  className="h-12 rounded-2xl border border-white/10 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/10 cursor-not-allowed opacity-70"
+                  disabled
+                  title="Demo coming soon"
                 >
-                  <Link href="#">Watch demo</Link>
+                  Watch demo (coming soon)
                 </Button>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/65 sm:text-base">
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80 sm:text-base">
                 {trustItems.map((item) => (
                   <span key={item} className="inline-flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -209,7 +234,7 @@ export default function LandingPage() {
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2 text-sm text-white/60">
+                  <div className="flex min-w-0 items-center gap-2 text-sm text-white/75">
                     <Link2 className="h-4 w-4 shrink-0" />
                     <span className="truncate">inv.oicia.co/a8x9k2</span>
                   </div>
@@ -233,14 +258,14 @@ export default function LandingPage() {
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="flex items-center gap-2 text-sm text-white/60">
+                  <p className="flex items-center gap-2 text-sm text-white/75">
                     <Clock3 className="h-4 w-4" />
                     Avg. payment time
                   </p>
                   <p className="mt-2 text-3xl font-semibold">3.2 days</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="flex items-center gap-2 text-sm text-white/60">
+                  <p className="flex items-center gap-2 text-sm text-white/75">
                     <Zap className="h-4 w-4 text-emerald-400" />
                     On-time rate
                   </p>
@@ -264,7 +289,7 @@ export default function LandingPage() {
 
         <section className="border-b border-white/10 py-16">
           <div className="mx-auto max-w-6xl px-6">
-            <p className="text-center text-lg text-white/65">Trusted by forward-thinking companies</p>
+            <p className="text-center text-lg text-white/80">Trusted by forward-thinking companies</p>
             <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
@@ -286,7 +311,7 @@ export default function LandingPage() {
               <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
                 Everything you need to get paid
               </h2>
-              <p className="mt-4 text-lg text-white/65 sm:text-xl">
+              <p className="mt-4 text-lg text-white/80 sm:text-xl">
                 Professional invoicing tools designed for modern businesses
               </p>
             </div>
@@ -311,14 +336,106 @@ export default function LandingPage() {
                     <feature.icon className="h-6 w-6 text-indigo-300" />
                   </div>
                   <h3 className="text-3xl font-semibold tracking-tight">{feature.title}</h3>
-                  <p className="mt-3 text-lg leading-relaxed text-white/65">{feature.description}</p>
+                  <p className="mt-3 text-lg leading-relaxed text-white/80">{feature.description}</p>
                 </Card>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="pricing" className="py-20">
+        <section id="pricing" className="py-20 border-b border-white/10">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="text-center">
+              <Badge className="rounded-full border border-indigo-500/35 bg-indigo-500/10 px-4 py-1.5 text-sm font-semibold text-indigo-300">
+                Pricing
+              </Badge>
+              <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+                Simple, transparent pricing
+              </h2>
+              <p className="mt-4 text-lg text-white/80">
+                Start free, upgrade when you grow. No hidden fees.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  name: "Starter",
+                  price: "Free",
+                  period: "forever",
+                  description: "Perfect for freelancers and solo founders.",
+                  features: ["Up to 10 invoices/month", "1 team member", "PDF export", "Email delivery", "Basic reminders"],
+                  cta: "Get started",
+                  href: "/sign-up",
+                  highlighted: false,
+                },
+                {
+                  name: "Professional",
+                  price: "$29",
+                  period: "per month",
+                  description: "For growing teams that invoice at scale.",
+                  features: ["Unlimited invoices", "5 team members", "Peppol & UBL XML", "Automated reminders", "Stripe payments", "Audit log"],
+                  cta: "Start free trial",
+                  href: "/sign-up",
+                  highlighted: true,
+                },
+                {
+                  name: "Enterprise",
+                  price: "Custom",
+                  period: "contact us",
+                  description: "For large organisations with advanced needs.",
+                  features: ["Unlimited everything", "Unlimited team members", "SSO & advanced security", "Custom compliance packs", "SLA & dedicated support", "API access"],
+                  cta: "Talk to sales",
+                  href: "#get-started",
+                  highlighted: false,
+                },
+              ].map((plan) => (
+                <Card
+                  key={plan.name}
+                  className={`relative flex flex-col rounded-3xl border p-8 ${
+                    plan.highlighted
+                      ? "border-indigo-500/50 bg-[radial-gradient(circle_at_50%_0%,rgba(96,77,255,0.25),rgba(13,15,29,0.95)_55%)] shadow-[0_0_40px_rgba(96,77,255,0.15)]"
+                      : "border-white/10 bg-[#0d0f1d]/70"
+                  }`}
+                >
+                  {plan.highlighted ? (
+                    <span className="absolute -right-2 -top-3 rounded-full bg-indigo-500 px-3 py-1 text-xs font-semibold">
+                      Most popular
+                    </span>
+                  ) : null}
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold text-indigo-300 uppercase tracking-widest">{plan.name}</p>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
+                      <span className="text-sm text-white/50">/{plan.period}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-white/60">{plan.description}</p>
+                  </div>
+                  <ul className="flex-1 space-y-3 mb-8">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-sm text-white/80">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    asChild
+                    className={plan.highlighted
+                      ? "h-11 rounded-2xl bg-indigo-500 font-semibold shadow-lg shadow-indigo-500/20 hover:bg-indigo-400"
+                      : "h-11 rounded-2xl border border-white/10 bg-white/5 font-semibold text-white hover:bg-white/10"
+                    }
+                    variant={plan.highlighted ? "default" : "secondary"}
+                  >
+                    <Link href={plan.href}>{plan.cta}</Link>
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="py-20">
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center">
               <Badge className="rounded-full border border-indigo-500/35 bg-indigo-500/10 px-4 py-1.5 text-sm font-semibold text-indigo-300">
@@ -337,18 +454,18 @@ export default function LandingPage() {
                     <step.icon className="h-6 w-6 text-indigo-300" />
                   </div>
                   <h3 className="mt-5 text-3xl font-semibold tracking-tight">{step.title}</h3>
-                  <p className="mt-3 text-lg leading-relaxed text-white/65">{step.description}</p>
+                  <p className="mt-3 text-lg leading-relaxed text-white/80">{step.description}</p>
                 </Card>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="docs" className="pb-20 pt-6">
+        <section id="get-started" className="pb-20 pt-6">
           <div className="mx-auto max-w-6xl px-6">
             <Card className="rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_100%,rgba(98,80,255,0.24),rgba(13,15,29,0.95)_55%)] px-6 py-12 text-center sm:px-10">
               <h2 className="text-4xl font-semibold tracking-tight sm:text-5xl">Ready to get paid faster?</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-white/65 sm:text-xl">
+              <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-white/80 sm:text-xl">
                 Join thousands of businesses using Invoicia to streamline their billing and improve cash flow.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -362,11 +479,12 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button
-                  asChild
                   variant="secondary"
-                  className="h-12 rounded-2xl border border-white/10 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/10"
+                  className="h-12 rounded-2xl border border-white/10 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/10 cursor-not-allowed opacity-70"
+                  disabled
+                  title="Sales contact coming soon"
                 >
-                  <Link href="#">Talk to sales</Link>
+                  Talk to sales (coming soon)
                 </Button>
               </div>
               <p className="mt-6 text-sm text-white/55">
@@ -382,12 +500,12 @@ export default function LandingPage() {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {footerColumns.map((column) => (
               <div key={column.title}>
-                <h3 className="text-3xl font-semibold">{column.title}</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-white/50">{column.title}</h3>
                 <ul className="mt-4 space-y-3">
                   {column.links.map((item) => (
-                    <li key={item}>
-                      <Link href="#" className="text-lg text-white/65 hover:text-white">
-                        {item}
+                    <li key={item.label}>
+                      <Link href={item.href} className="text-sm text-white/80 hover:text-white">
+                        {item.label}
                       </Link>
                     </li>
                   ))}
@@ -397,22 +515,22 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3 text-lg text-white/60">
+            <div className="flex items-center gap-3 text-lg text-white/75">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600">
                 <FileText className="h-4 w-4" />
               </span>
               © 2026 Invoicia. All rights reserved.
             </div>
-            <div className="flex items-center gap-4 text-white/60">
-              <Link href="#" aria-label="Twitter" className="hover:text-white">
+            <div className="flex items-center gap-4 text-white/75">
+              <a href="https://twitter.com/invoicia" target="_blank" rel="noopener noreferrer" aria-label="Invoicia on Twitter" className="hover:text-white">
                 <Twitter className="h-5 w-5" />
-              </Link>
-              <Link href="#" aria-label="GitHub" className="hover:text-white">
+              </a>
+              <a href="https://github.com/invoicia" target="_blank" rel="noopener noreferrer" aria-label="Invoicia on GitHub" className="hover:text-white">
                 <Github className="h-5 w-5" />
-              </Link>
-              <Link href="#" aria-label="LinkedIn" className="hover:text-white">
+              </a>
+              <a href="https://linkedin.com/company/invoicia" target="_blank" rel="noopener noreferrer" aria-label="Invoicia on LinkedIn" className="hover:text-white">
                 <Linkedin className="h-5 w-5" />
-              </Link>
+              </a>
             </div>
           </div>
         </div>

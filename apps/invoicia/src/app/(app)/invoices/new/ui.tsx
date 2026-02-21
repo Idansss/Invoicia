@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatMoney } from "@/lib/format";
 import { createInvoiceAction } from "../actions";
+import { AlertCircle } from "lucide-react";
 
 const schema = z.object({
   customerId: z.string().min(1),
@@ -86,7 +87,7 @@ export function InvoiceBuilder(props: {
         {
           description: "",
           quantity: "1",
-          unitPriceCents: "0",
+          unitPriceCents: "0.00",
           unit: "each",
           taxPercent: String(props.orgDefaults.taxPercent ?? 7),
         },
@@ -105,7 +106,8 @@ export function InvoiceBuilder(props: {
     if (!p) return;
     form.setValue(`lineItems.${index}.productId`, p.id);
     form.setValue(`lineItems.${index}.description`, p.name);
-    form.setValue(`lineItems.${index}.unitPriceCents`, String(p.unitPriceCents));
+    // unitPriceCents field now holds dollar amount for display; divide by 100
+    form.setValue(`lineItems.${index}.unitPriceCents`, String((p.unitPriceCents / 100).toFixed(2)));
     form.setValue(`lineItems.${index}.unit`, p.unit);
     if (p.taxPercent != null)
       form.setValue(`lineItems.${index}.taxPercent`, String(p.taxPercent));
@@ -115,32 +117,42 @@ export function InvoiceBuilder(props: {
   const discountType = form.watch("discountType") ?? "PERCENT";
   const discountValue = Number(form.watch("discountValue") || 0);
 
+  // unitPriceCents field now holds a dollar value (better UX); convert to cents for display math
   const subtotal = watchLines.reduce(
     (sum, li) =>
-      sum +
-      Math.round(
-        Number(li.quantity || 0) * Number(li.unitPriceCents || 0),
-      ),
+      sum + Math.round(Number(li.quantity || 0) * Number(li.unitPriceCents || 0) * 100),
     0,
   );
 
   const taxTotal = watchLines.reduce((sum, li) => {
-    const lineTotal = Number(li.quantity || 0) * Number(li.unitPriceCents || 0);
+    const lineTotalCents = Math.round(Number(li.quantity || 0) * Number(li.unitPriceCents || 0) * 100);
     const taxPercent = Number(li.taxPercent || props.orgDefaults.taxPercent || 0);
-    return sum + Math.round((lineTotal * taxPercent) / 100);
+    return sum + Math.round((lineTotalCents * taxPercent) / 100);
   }, 0);
 
   const discountAmount = discountEnabled
     ? discountType === "PERCENT"
       ? Math.round((subtotal * discountValue) / 100)
-      : Math.round(discountValue)
+      : Math.round(discountValue * 100)
     : 0;
 
   const total = subtotal + taxTotal - discountAmount;
 
   async function onSubmit(values: FormValues) {
     try {
-      await createInvoiceAction({ ...values, sendNow: submitIntent === "send" });
+      // Convert dollar amounts to cents before sending to server
+      const payload = {
+        ...values,
+        lineItems: values.lineItems.map((li) => ({
+          ...li,
+          unitPriceCents: String(Math.round(Number(li.unitPriceCents || 0) * 100)),
+        })),
+        discountValue: discountEnabled && values.discountValue && values.discountType === "FIXED"
+          ? String(Math.round(Number(values.discountValue) * 100))
+          : values.discountValue,
+        sendNow: submitIntent === "send",
+      };
+      await createInvoiceAction(payload);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create invoice.");
     }
@@ -151,17 +163,44 @@ export function InvoiceBuilder(props: {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
       toast.error("Attachment must be under 10MB");
+      event.target.value = "";
       return;
     }
-    try {
-      setAttachments((prev) => [...prev, file]);
-      toast.success("Attachment queued for this draft");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add attachment");
-    } finally {
-      event.target.value = "";
-    }
+    setAttachments((prev) => [...prev, file]);
+    toast.info(`${file.name} selected — it will be available to upload after saving the invoice.`);
+    event.target.value = "";
   };
+
+  if (props.customers.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
+            <Link href="/invoices">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">New Invoice</h1>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">No customers yet</p>
+              <p className="text-sm text-muted-foreground">You need at least one customer before creating an invoice.</p>
+            </div>
+            <Button asChild>
+              <Link href="/customers">Add your first customer</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -239,7 +278,7 @@ export function InvoiceBuilder(props: {
                   items.append({
                     description: "",
                     quantity: "1",
-                    unitPriceCents: "0",
+                    unitPriceCents: "0.00",
                     unit: "each",
                     taxPercent: String(props.orgDefaults.taxPercent ?? 7),
                   })
@@ -278,23 +317,28 @@ export function InvoiceBuilder(props: {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Quantity</Label>
-                      <Input className="h-9" type="number" step="0.01" {...form.register(`lineItems.${idx}.quantity`)} />
+                      <Input className="h-9" type="number" step="0.01" min="0" {...form.register(`lineItems.${idx}.quantity`)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Unit Price (cents)</Label>
-                      <Input className="h-9" type="number" {...form.register(`lineItems.${idx}.unitPriceCents`)} />
+                      <Label className="text-xs">Unit</Label>
+                      <Input className="h-9" placeholder="each" {...form.register(`lineItems.${idx}.unit`)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Unit Price</Label>
+                      <Input className="h-9" type="number" step="0.01" min="0" placeholder="0.00" {...form.register(`lineItems.${idx}.unitPriceCents`)} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Tax (%)</Label>
-                      <Input className="h-9" type="number" {...form.register(`lineItems.${idx}.taxPercent`)} />
+                      <Input className="h-9" type="number" step="0.01" min="0" max="100" {...form.register(`lineItems.${idx}.taxPercent`)} />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 sm:col-span-2">
                       <Label className="text-xs">Line Total</Label>
                       <div className="flex items-center h-9 px-3 rounded-md bg-muted text-sm font-medium text-foreground">
                         {formatMoney(
                           Math.round(
                             Number(form.watch(`lineItems.${idx}.quantity`) || 0) *
-                              Number(form.watch(`lineItems.${idx}.unitPriceCents`) || 0),
+                              Number(form.watch(`lineItems.${idx}.unitPriceCents`) || 0) *
+                              100,
                           ),
                           props.orgDefaults.currency,
                         )}
@@ -335,7 +379,7 @@ export function InvoiceBuilder(props: {
                       <SelectItem value="FIXED">Fixed Amount</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input className="h-9 w-32" type="number" {...form.register("discountValue")} placeholder={discountType === "PERCENT" ? "%" : "cents"} />
+                  <Input className="h-9 w-32" type="number" step="0.01" min="0" {...form.register("discountValue")} placeholder={discountType === "PERCENT" ? "e.g. 10" : "e.g. 50.00"} />
                 </div>
               </CardContent>
             ) : null}
@@ -350,10 +394,6 @@ export function InvoiceBuilder(props: {
                 <Label className="text-xs">Notes</Label>
                 <Textarea className="min-h-[80px] resize-none" placeholder="Add a note for your customer..." {...form.register("notes")} />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Payment Terms</Label>
-                <Textarea className="min-h-[60px] resize-none" placeholder="e.g., Net 30, Due on receipt..." />
-              </div>
             </CardContent>
           </Card>
 
@@ -366,11 +406,12 @@ export function InvoiceBuilder(props: {
                 <input type="file" className="hidden" onChange={handleAttachmentUpload} />
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm font-medium text-foreground">
-                  Drop files here or click to upload
+                  Click to select files
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">PDF, images, or documents up to 10MB</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Attachments are uploaded from the invoice detail page after saving.</p>
                 {attachments.length > 0 ? (
-                  <p className="text-xs text-muted-foreground mt-2">{attachments.length} attachment(s) added</p>
+                  <p className="text-xs text-muted-foreground mt-2">{attachments.length} file(s) noted — upload after saving</p>
                 ) : null}
               </label>
             </CardContent>
@@ -427,10 +468,10 @@ export function InvoiceBuilder(props: {
                   type="button"
                   onClick={() => {
                     window.print();
-                    toast.success("Print preview opened");
                   }}
+                  title="Print this page"
                 >
-                  <Eye className="h-4 w-4" /> Preview PDF
+                  <Eye className="h-4 w-4" /> Print preview
                 </Button>
               </div>
 
@@ -497,7 +538,7 @@ export function InvoiceBuilder(props: {
                       toast.success("Draft cleared");
                     }}
                   >
-                    <Ban className="h-4 w-4 mr-2" /> Void
+                    <Ban className="h-4 w-4 mr-2" /> Clear form
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

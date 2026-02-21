@@ -35,6 +35,14 @@ type InvoiceAttachmentView = {
   storagePath: string
 }
 
+type InvoiceAuditEventView = {
+  id: string
+  action: string
+  actorName: string | null
+  actorEmail: string | null
+  createdAt: Date
+}
+
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { orgId } = await requireOrgRole(["OWNER", "ADMIN", "ACCOUNTANT", "STAFF", "READONLY"])
@@ -57,6 +65,31 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     },
   })
   if (!invoice) return notFound()
+
+  const rawAuditEvents = await prisma.auditEvent.findMany({
+    where: { entityId: id, orgId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: { id: true, action: true, actorUserId: true, createdAt: true },
+  })
+  const actorIds = [...new Set(rawAuditEvents.map((e) => e.actorUserId).filter(Boolean))] as string[]
+  const actors = actorIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: actorIds } },
+        select: { id: true, name: true, email: true },
+      })
+    : []
+  const actorMap = new Map(actors.map((a) => [a.id, a]))
+  const auditEvents: InvoiceAuditEventView[] = rawAuditEvents.map((e) => {
+    const actor = e.actorUserId ? actorMap.get(e.actorUserId) : null
+    return {
+      id: e.id,
+      action: e.action,
+      actorName: actor?.name ?? null,
+      actorEmail: actor?.email ?? null,
+      createdAt: e.createdAt,
+    }
+  })
 
   const totals = computeInvoiceTotals(invoice)
   const paidCents = invoice.payments
@@ -120,6 +153,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       }}
       currency={org.currency}
       timezone={org.timezone}
+      auditEvents={auditEvents.map((e) => ({
+        id: e.id,
+        action: e.action,
+        actorName: e.actorName,
+        actorEmail: e.actorEmail,
+        createdAt: e.createdAt.toISOString(),
+      }))}
     />
   )
 }

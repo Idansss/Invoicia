@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/server/db";
 import { getActiveOrgId, requireUser } from "@/server/tenant";
 import { AppShellClient } from "@/components/app/app-shell-client";
@@ -15,6 +16,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       orderBy: { createdAt: "asc" },
     }),
   ]);
+  if (memberships.length === 0) {
+    redirect("/app/onboarding");
+  }
+
   const activeOrgId = await getActiveOrgId(userId);
   const activeOrg = memberships.find((m) => m.orgId === activeOrgId)?.org ?? null;
 

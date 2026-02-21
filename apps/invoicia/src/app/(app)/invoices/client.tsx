@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -53,27 +53,57 @@ export interface InvoiceRow {
 
 interface InvoicesClientProps {
   invoices: InvoiceRow[]
+  totalCount: number
+  pageSize: number
+  currentPage: number
+  initialSearch?: string
+  initialStatus?: string
 }
 
-export function InvoicesClient({ invoices }: InvoicesClientProps) {
+export function InvoicesClient({
+  invoices,
+  totalCount,
+  pageSize,
+  currentPage,
+  initialSearch = "",
+  initialStatus = "all",
+}: InvoicesClientProps) {
   const router = useRouter()
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [actionLoading, setActionLoading] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
-      if (statusFilter !== "all" && inv.status.toLowerCase() !== statusFilter) return false
-      if (
-        searchQuery &&
-        !inv.customerName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !inv.number.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false
-      return true
-    })
-  }, [invoices, searchQuery, statusFilter])
+  const navigate = useCallback(
+    (params: { search?: string; status?: string; page?: number }) => {
+      const sp = new URLSearchParams()
+      const s = params.search ?? initialSearch
+      const st = params.status ?? initialStatus
+      const pg = params.page ?? 1
+      if (s) sp.set("search", s)
+      if (st && st !== "all") sp.set("status", st)
+      if (pg > 1) sp.set("page", String(pg))
+      router.push(`/invoices${sp.toString() ? `?${sp.toString()}` : ""}`)
+    },
+    [router, initialSearch, initialStatus],
+  )
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => navigate({ search: value, status: initialStatus, page: 1 }), 350)
+  }
+
+  const handleStatusChange = (value: string) => {
+    navigate({ search: searchQuery, status: value, page: 1 })
+  }
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [currentPage, initialSearch, initialStatus])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const pagedInvoices = invoices
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -85,8 +115,8 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
   }
 
   const toggleAll = () => {
-    if (selectedIds.size === filteredInvoices.length) setSelectedIds(new Set())
-    else setSelectedIds(new Set(filteredInvoices.map((i) => i.id)))
+    if (selectedIds.size === pagedInvoices.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(pagedInvoices.map((i) => i.id)))
   }
 
   const triggerInvoiceAction = async (action: "send" | "void", invoiceId: string, successMessage: string) => {
@@ -129,12 +159,12 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
               <Input
                 placeholder="Search by customer or invoice number..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 h-9"
               />
             </div>
             <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={initialStatus} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-36 h-9">
                   <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
@@ -228,7 +258,7 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10 pl-4">
                   <Checkbox
-                    checked={selectedIds.size === filteredInvoices.length && filteredInvoices.length > 0}
+                    checked={selectedIds.size === pagedInvoices.length && pagedInvoices.length > 0}
                     onCheckedChange={toggleAll}
                     aria-label="Select all"
                   />
@@ -243,7 +273,7 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.length === 0 ? (
+              {pagedInvoices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-40">
                     <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -254,7 +284,7 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredInvoices.map((invoice) => (
+                pagedInvoices.map((invoice) => (
                   <TableRow key={invoice.id} className="group cursor-pointer transition-colors hover:bg-muted/50">
                     <TableCell className="pl-4">
                       <Checkbox
@@ -328,15 +358,43 @@ export function InvoicesClient({ invoices }: InvoicesClientProps) {
           </Table>
 
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <p className="text-xs text-muted-foreground">Showing {filteredInvoices.length} of {invoices.length} invoices</p>
+            <p className="text-xs text-muted-foreground">
+              {totalCount === 0 ? "No invoices" : `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalCount)} of ${totalCount} invoices`}
+            </p>
             <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 bg-transparent"
+                disabled={currentPage === 1}
+                onClick={() => navigate({ search: searchQuery, status: initialStatus, page: currentPage - 1 })}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground">
-                1
-              </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" disabled>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((p, idx, arr) => (
+                  <Fragment key={p}>
+                    {idx > 0 && arr[idx - 1] !== p - 1 ? (
+                      <span className="text-xs text-muted-foreground px-1">…</span>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`h-8 w-8 ${p === currentPage ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-transparent"}`}
+                      onClick={() => navigate({ search: searchQuery, status: initialStatus, page: p })}
+                    >
+                      {p}
+                    </Button>
+                  </Fragment>
+                ))}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 bg-transparent"
+                disabled={currentPage === totalPages}
+                onClick={() => navigate({ search: searchQuery, status: initialStatus, page: currentPage + 1 })}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

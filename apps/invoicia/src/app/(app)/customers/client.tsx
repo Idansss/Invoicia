@@ -200,10 +200,27 @@ export function CustomersClient({ customers }: CustomersClientProps) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-40">
-                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <Users className="h-8 w-8 opacity-40" />
-                      <p className="text-sm font-medium">No customers found</p>
+                  <TableCell colSpan={5} className="h-48">
+                    <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                      <Users className="h-10 w-10 opacity-30" />
+                      {customers.length === 0 ? (
+                        <>
+                          <p className="text-sm font-semibold text-foreground">No customers yet</p>
+                          <p className="text-xs text-muted-foreground">Add your first customer to start creating invoices.</p>
+                          <button
+                            type="button"
+                            className="rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                            onClick={() => setDialogOpen(true)}
+                          >
+                            Add customer
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium">No customers match your search</p>
+                          <p className="text-xs">Try adjusting your search query.</p>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

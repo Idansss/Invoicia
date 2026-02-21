@@ -13,7 +13,10 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "worker": "tsx src/worker.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -60,6 +63,7 @@
     "zod": "^4.1.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/luxon": "^3.4.2",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.18",
