@@ -11,7 +11,7 @@
  * project tests will be skipped too (they depend on this setup).
  */
 import path from "node:path";
-import { test as setup, expect, skip } from "@playwright/test";
+import { test as setup, expect } from "@playwright/test";
 
 const AUTH_FILE = path.join(__dirname, ".auth/user.json");
 
@@ -26,7 +26,7 @@ setup("authenticate", async ({ page }) => {
     );
     // Write an empty storage state so the dependent project doesn't crash
     await page.context().storageState({ path: AUTH_FILE });
-    skip();
+    setup.skip(true, "E2E_EMAIL / E2E_PASSWORD not set");
     return;
   }
 
